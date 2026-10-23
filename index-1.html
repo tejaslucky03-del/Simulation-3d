@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>SquishLab 3D</title>
+<style>
+:root{color-scheme:dark;--bg:#080d18;--panel:#121a2b;--line:#26334c;--accent:#71e7ff;--text:#f3f7ff;--muted:#a8b5cc}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px system-ui,-apple-system,Segoe UI,sans-serif}
+header{padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+h1{font-size:20px;margin:0;letter-spacing:.3px}header p{margin:3px 0 0;color:var(--muted);font-size:12px}
+.pill{border:1px solid #31506a;color:var(--accent);padding:6px 9px;border-radius:99px;font-size:11px;white-space:nowrap}
+main{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:12px;padding:0 12px 14px;max-width:1400px;margin:auto}
+.stage{position:relative;min-height:440px;height:calc(100vh - 100px);max-height:850px;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:radial-gradient(ellipse at 50% 35%,#182b48,#080d18 70%)}
+#view{width:100%;height:100%;display:block;touch-action:pan-y}
+.hud{position:absolute;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;gap:8px;pointer-events:none}
+.hud span{background:#09101dcc;border:1px solid #34435b;padding:7px 10px;border-radius:9px;font-size:11px;color:#dcecff}
+.centerMessage{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;text-shadow:0 2px 12px #000;max-width:90%}
+.centerMessage strong{font-size:clamp(20px,4vw,34px);display:block}.centerMessage small{color:#c4d4ec}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;overflow:auto;max-height:calc(100vh - 100px)}
+h2{font-size:14px;margin:0 0 10px;color:#eaf4ff}.section{padding-bottom:14px;margin-bottom:14px;border-bottom:1px solid var(--line)}.section:last-child{border:0;margin:0;padding:0}
+label{display:block;color:var(--muted);font-size:12px;margin:9px 0 5px}
+select,button{font:inherit;border-radius:10px;border:1px solid #34445f;background:#0b1322;color:var(--text);padding:10px;width:100%;min-height:40px}
+select:focus,button:focus{outline:2px solid var(--accent);outline-offset:1px}
+button{cursor:pointer;font-weight:650}button.primary{background:var(--accent);color:#06111a;border-color:var(--accent)}button.secondary{background:#1b2940}
+.btnrow{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.levels{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}.level{font-size:11px;padding:9px 3px;min-height:38px}.level.active{background:#174256;border-color:var(--accent);color:var(--accent)}
+input[type=range]{width:100%;accent-color:var(--accent)}.value{float:right;color:var(--accent);font-weight:700}
+small.note{display:block;color:var(--muted);font-size:11px;line-height:1.45;margin-top:8px}
+#status{font-size:12px;color:var(--accent);min-height:18px;margin-top:8px;overflow-wrap:anywhere}
+footer{max-width:1400px;padding:0 16px 18px;color:var(--muted);font-size:11px;line-height:1.5}
+@media(max-width:800px){main{grid-template-columns:1fr;padding:0 9px 12px;gap:9px}.stage{height:52vh;min-height:340px;max-height:600px}.panel{max-height:none;overflow:visible}header{padding:12px}.pill{display:none}.btnrow button{min-height:44px}}
+</style>
+</head>
+<body>
+<header><div><h1>🫧 SquishLab 3D</h1><p>Choose a shape. Pick a course. Watch it squish.</p></div><span class="pill">3D PHYSICS PLAYGROUND</span></header>
+<main>
+<section class="stage">
+<canvas id="view"></canvas>
+<div class="hud"><span id="roundHud">ROUND 01 / 25</span><span id="softHud">SOFTNESS 50%</span></div>
+<div class="centerMessage" id="message"><strong>Ready to squish?</strong><small>Tap Start Simulation</small></div>
+</section>
+<aside class="panel">
+<div class="section"><h2>01 / Choose your round</h2>
+<label for="round">Obstacle course (25 rounds)</label><select id="round"></select>
+<label for="object">3D object</label><select id="object">
+<option value="sphere">Jelly ball</option><option value="cube">Soft cube</option><option value="donut">Donut</option><option value="cone">Cone</option><option value="crystal">Crystal</option><option value="cylinder">Cylinder</option><option value="duck">Duck-like blob</option><option value="gem">Gem</option>
+</select>
+</div>
+<div class="section"><h2>02 / Softness</h2><div class="levels">
+<button class="level" data-soft="0">0%<br>Hard</button><button class="level" data-soft="25">25%<br>Firm</button><button class="level active" data-soft="50">50%<br>Squishy</button><button class="level" data-soft="100">100%<br>Jelly</button>
+</div>
+<label for="customSoft">Custom softness <span class="value" id="softValue">50%</span></label><input id="customSoft" type="range" min="0" max="100" step="5" value="50">
+<label for="speed">Simulation speed <span class="value" id="speedValue">1.0×</span></label><input id="speed" type="range" min="0.5" max="1.5" step="0.1" value="1">
+</div>
+<div class="section"><h2>03 / Simulation controls</h2>
+<button class="primary" id="start">▶ Start simulation</button><div class="btnrow"><button class="secondary" id="pause">Ⅱ Pause</button><button class="secondary" id="reset">↻ Restart</button></div>
+<div class="btnrow"><button class="secondary" id="sound">🔊 Sound on</button><button class="secondary" id="record">● Record video</button></div>
+<button class="secondary" id="download" style="margin-top:8px" disabled>⬇ Save video</button>
+<div id="status">Ready. Pick a round and press Start.</div>
+<small class="note">Video recording captures the 3D canvas as WebM where supported. On Android, open the downloaded file and move/save it to Gallery if it does not appear automatically. Keep this page open while recording.</small>
+</div>
+<div class="section"><h2>Course notes</h2><div id="courseInfo" style="color:var(--muted);font-size:12px;line-height:1.5">A funnel and obstacles guide your object toward the hole.</div></div>
+</aside>
+</main>
+<footer>Made for personal experiments and Shorts-style clips. This is a lightweight browser physics simulation, not a full engineering-grade soft-body solver. Requires an internet connection to load Three.js from its CDN.</footer>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+
+const canvas=document.querySelector('#view');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true,preserveDrawingBuffer:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(canvas.clientWidth,canvas.clientHeight,false);
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+const scene=new THREE.Scene();scene.fog=new THREE.Fog(0x080d18,17,38);
+const camera=new THREE.PerspectiveCamera(42,1,.1,100);camera.position.set(8,8,13);camera.lookAt(0,2,0);
+scene.add(new THREE.HemisphereLight(0xb9dcff,0x192039,2.1));
+const keyLight=new THREE.DirectionalLight(0xffffff,3.2);keyLight.position.set(5,10,7);keyLight.castShadow=true;scene.add(keyLight);
+const rimLight=new THREE.PointLight(0x50ddff,30,25);rimLight.position.set(-5,5,-4);scene.add(rimLight);
+const world=new THREE.Group();scene.add(world);
+const mat=(color,rough=.35,metal=.12)=>new THREE.MeshStandardMaterial({color,roughness:rough,metalness:metal});
+const floorMat=mat(0x18243a,.78,0);
+let floor=new THREE.Mesh(new THREE.PlaneGeometry(40,40),floorMat);floor.rotation.x=-Math.PI/2;floor.position.y=-.15;floor.receiveShadow=true;world.add(floor);
+const grid=new THREE.GridHelper(30,30,0x36516f,0x20314a);grid.position.y=-.13;world.add(grid);
+const hole=new THREE.Mesh(new THREE.CylinderGeometry(1.0,1.0,.08,48),mat(0x02050b,1,0));hole.position.set(0,-.08,0);world.add(hole);
+const ring=new THREE.Mesh(new THREE.TorusGeometry(1.08,.12,14,64),mat(0x59d8ff,.25,.55));ring.rotation.x=Math.PI/2;ring.position.y=.02;world.add(ring);
+const holeGlow=new THREE.PointLight(0x25baff,4,5);holeGlow.position.set(0,.2,0);world.add(holeGlow);
+
+const courses=[
+['Starter Funnel','A gentle ramp and two bumpers'],['Pinball Alley','Three bumpers bounce the object sideways'],['Zigzag Rails','Alternating rails create a zigzag path'],['Spinner Gate','A rotating bar blocks the route'],['Twin Hammers','Two swinging-style blockers (static impact gates)'],['Bouncy Bridge','A raised bridge and landing pad'],['Narrow Squeeze','A narrow passage before the hole'],['Stepped Drop','Three ledges descend to the opening'],['Wall Maze','A small maze of barriers'],['Ring Run','A sequence of circular hoops'],['S-Curve','A curving path around bumpers'],['Ramp Jump','A ramp and a catch platform'],['Crossbar Chaos','Crossed bars guard the hole'],['Pillar Slalom','Pillars form a slalom'],['Double Funnel','Two funnel walls guide the object'],['Speed Bumps','Repeated low bumps'],['Corner Trap','A corner and a final gate'],['Offset Tunnel','A tunnel with offset openings'],['Spiral Route','A spiral-ish set of rails'],['Four Bumpers','Four colorful impact posts'],['Bridge Gap','Two platforms with a gap'],['Pendulum Lane','A rotating obstacle and side rails'],['Pin Forest','A field of short rounded pins'],['Gauntlet','A dense obstacle sequence'],['Final Challenge','Mixed obstacles before the hole']
+];
+const roundSelect=document.querySelector('#round');
+courses.forEach((c,i)=>{const o=document.createElement('option');o.value=i;o.textContent=String(i+1).padStart(2,'0')+' — '+c[0];roundSelect.appendChild(o)});
+const obstacleMats=[0xff5e7e,0xffb84d,0x67e8a5,0x9a8cff,0x52d9ff].map(c=>mat(c,.32,.25));
+let obstacles=[],objectMesh=null,basePositions=null,velocity=new THREE.Vector3(),running=false,paused=false,started=false,finished=false,softness=50,speed=1,soundOn=true,audioCtx=null,recorder=null,recordedChunks=[],lastImpact=0,simTime=0,elapsed=0;
+const status=document.querySelector('#status'),message=document.querySelector('#message');
+const setStatus=s=>status.textContent=s;
+function clearObstacles(){for(const o of obstacles){world.remove(o);o.geometry?.dispose()}obstacles=[]}
+function addBox(x,y,z,sx,sy,sz,color=0){const m=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),obstacleMats[(obstacles.length)%obstacleMats.length]);m.position.set(x,y,z);m.rotation.y=(obstacles.length%3-1)*.14;m.castShadow=true;m.receiveShadow=true;world.add(m);obstacles.push(m);return m}
+function addPost(x,z,r=.28,h=1.1){const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,18),obstacleMats[obstacles.length%obstacleMats.length]);m.position.set(x,h/2,z);m.castShadow=true;world.add(m);obstacles.push(m)}
+function buildCourse(index){
+ clearObstacles();const pattern=index%8;
+ // Always keep a guided lane and then vary obstacle arrangements by round.
+ addBox(-2.7,1.0,-1.5,.22,2.0,5.8);addBox(2.7,1.0,-1.5,.22,2.0,5.8);
+ if(pattern===0){addBox(-1,1.15,-2.2,2,.25,.35);addPost(1.1,-.6,.38,.8);addBox(0,.55,1.0,2.5,.22,.35)}
+ if(pattern===1){[-1.7,-.5,.7,1.8].forEach((x,i)=>addPost(x,-2.3+(i%2)*1.2,.36,.9));addBox(0,.5,.4,3,.2,.3)}
+ if(pattern===2){addBox(-.8,.8,-2.4,3,.25,.28);addBox(.8,.8,-.8,3,.25,.28);addBox(-.8,.8,.8,3,.25,.28)}
+ if(pattern===3){addBox(0,.7,-2.2,3,.3,.3);addBox(.4,.65,.0,2.5,.3,.3);addBox(-.2,.65,1.4,2.7,.3,.3)}
+ if(pattern===4){[-1.6,0,1.6].forEach((x,i)=>addPost(x,-2.1+(i%2)*.5,.42,1.2));addBox(0,.55,.7,2.6,.22,.4)}
+ if(pattern===5){addBox(-1.2,.6,-2.3,2.2,.25,.6);addBox(1.1,1.1,-.7,2.3,.25,.6);addBox(0,.6,1.0,2.2,.25,.6)}
+ if(pattern===6){addBox(-.95,.9,-1.8,.18,1.8,2.6);addBox(.95,.9,-.3,.18,1.8,2.6);addBox(0,.55,1.3,1.3,.2,.3)}
+ if(pattern===7){for(let i=0;i<5;i++)addPost(-1.5+(i%3)*1.45,-2.4+Math.floor(i/3)*1.5,.24,.7+(i%2)*.4);addBox(0,.6,.6,2.4,.2,.35)}
+ // Extra round-specific pieces make all 25 course selections visually distinct.
+ const n=2+(index%4);
+ for(let j=0;j<n;j++){let x=((j*1.37+index*.61)%3.5)-1.75,z=-2.4+j*.83;if(index%3===0)addPost(x,z,.19,.55+(j%2)*.35);else if(index%3===1)addBox(x,.48,z,.65,.18,.25);else addBox(x,.65,z,.22,1.15,.45)}
+ // Color-coded finish ring remains visible.
+ document.querySelector('#courseInfo').textContent=courses[index][0]+': '+courses[index][1]+'. Obstacles are generated in 3D; collisions trigger sound and a squish response.';
+ document.querySelector('#roundHud').textContent=`ROUND ${String(index+1).padStart(2,'0')} / 25`;
+}
+function makeGeometry(type){
+ switch(type){
+ case'cube':return new THREE.BoxGeometry(.9,.9,.9,8,8,8);
+ case'donut':return new THREE.TorusGeometry(.55,.25,16,48);
+ case'cone':return new THREE.ConeGeometry(.58,.95,32,10);
+ case'crystal':return new THREE.OctahedronGeometry(.72,2);
+ case'cylinder':return new THREE.CylinderGeometry(.48,.48,.9,32,8);
+ case'duck':return new THREE.SphereGeometry(.68,32,24);
+ case'gem':return new THREE.DodecahedronGeometry(.7,1);
+ default:return new THREE.SphereGeometry(.65,40,32);
+ }
+}
+function createObject(){
+ if(objectMesh){world.remove(objectMesh);objectMesh.geometry.dispose();objectMesh.material.dispose()}
+ const type=document.querySelector('#object').value;
+ const colors={sphere:0x55e5ff,cube:0xff7b9c,donut:0xffc65a,cone:0xb6ff72,crystal:0xb09cff,cylinder:0x6ef0bc,duck:0xffa85c,gem:0x70a8ff};
+ const geo=makeGeometry(type);const material=new THREE.MeshPhysicalMaterial({color:colors[type],roughness:.24,metalness:.12,clearcoat:.8,clearcoatRoughness:.18});
+ objectMesh=new THREE.Mesh(geo,material);objectMesh.castShadow=true;objectMesh.receiveShadow=true;objectMesh.position.set(0,5.8,2.7);objectMesh.scale.setScalar(1);world.add(objectMesh);
+ const pos=geo.attributes.position; basePositions=new Float32Array(pos.array);
+ velocity.set(0,0,0);simTime=0;elapsed=0;finished=false;started=false;running=false;paused=false;
+ message.style.display='block';message.innerHTML='<strong>Ready to squish?</strong><small>Tap Start Simulation</small>';
+}
+function setSoft(v){softness=Number(v);document.querySelector('#customSoft').value=softness;document.querySelector('#softValue').textContent=softness+'%';document.querySelector('#softHud').textContent='SOFTNESS '+softness+'%';document.querySelectorAll('.level').forEach(b=>b.classList.toggle('active',Number(b.dataset.soft)===softness))}
+function playImpact(force=1){
+ if(!soundOn)return;
+ try{audioCtx ||= new (window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();osc.type='sine';osc.frequency.setValueAtTime(170+Math.random()*150,audioCtx.currentTime);osc.frequency.exponentialRampToValueAtTime(65,audioCtx.currentTime+.12);gain.gain.setValueAtTime(Math.min(.24,.07+force*.025),audioCtx.currentTime);gain.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+.16);osc.connect(gain);gain.connect(audioCtx.destination);osc.start();osc.stop(audioCtx.currentTime+.17)}catch(e){}
+}
+function deform(amount){
+ if(!objectMesh||!basePositions)return;const pos=objectMesh.geometry.attributes.position;const factor=Math.min(.36,Math.max(0,amount)*(softness/100)*.32);
+ for(let i=0;i<pos.count;i++){const x=basePositions[i*3],y=basePositions[i*3+1],z=basePositions[i*3+2];pos.array[i*3]=x*(1+factor*.45);pos.array[i*3+1]=y*(1-factor);pos.array[i*3+2]=z*(1+factor*.45)}
+ pos.needsUpdate=true;objectMesh.geometry.computeVertexNormals();
+}
+function restoreShape(){if(!objectMesh||!basePositions)return;const p=objectMesh.geometry.attributes.position;for(let i=0;i<p.count*3;i++)p.array[i]=basePositions[i];p.needsUpdate=true;objectMesh.geometry.computeVertexNormals()}
+function resetSim(){createObject();buildCourse(Number(roundSelect.value));setStatus('Reset. Ready to run this round.')}
+function startSim(){if(finished||!started){createObject();buildCourse(Number(roundSelect.value))}running=true;paused=false;started=true;message.style.display='none';setStatus('Simulation running…');}
+document.querySelector('#start').addEventListener('click',()=>{if(!started||finished){createObject();buildCourse(Number(roundSelect.value))}startSim()});
+document.querySelector('#pause').addEventListener('click',()=>{if(!started)return;paused=!paused;running=!paused;document.querySelector('#pause').textContent=paused?'▶ Resume':'Ⅱ Pause';setStatus(paused?'Paused.':'Simulation running…')});
+document.querySelector('#reset').addEventListener('click',resetSim);
+document.querySelectorAll('.level').forEach(b=>b.addEventListener('click',()=>setSoft(b.dataset.soft)));
+document.querySelector('#customSoft').addEventListener('input',e=>setSoft(e.target.value));
+document.querySelector('#speed').addEventListener('input',e=>{speed=Number(e.target.value);document.querySelector('#speedValue').textContent=speed.toFixed(1)+'×'});
+document.querySelector('#sound').addEventListener('click',e=>{soundOn=!soundOn;e.currentTarget.textContent=soundOn?'🔊 Sound on':'🔇 Sound off'});
+roundSelect.addEventListener('change',()=>{resetSim();document.querySelector('#roundHud').textContent=`ROUND ${String(Number(roundSelect.value)+1).padStart(2,'0')} / 25`});
+document.querySelector('#object').addEventListener('change',resetSim);
+
+function recordStart(){
+ if(!canvas.captureStream||!window.MediaRecorder){setStatus('Video recording is not supported by this browser. Try Chrome on Android.');return}
+ try{recordedChunks=[];const stream=canvas.captureStream(30);let mime='video/webm;codecs=vp9';if(!MediaRecorder.isTypeSupported(mime))mime='video/webm';recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:5000000});
+ recorder.ondataavailable=e=>{if(e.data&&e.data.size)recordedChunks.push(e.data)};
+ recorder.onstop=()=>{const blob=new Blob(recordedChunks,{type:recorder.mimeType||'video/webm'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`squishlab-round-${Number(roundSelect.value)+1}.webm`;document.body.appendChild(a);a.click();a.remove();document.querySelector('#download').disabled=false;document.querySelector('#download').onclick=()=>{const b=document.createElement('a');b.href=url;b.download=`squishlab-round-${Number(roundSelect.value)+1}.webm`;b.click()};setStatus('Recording saved as a WebM download. Check Downloads / Gallery.');document.querySelector('#record').textContent='● Record video'};
+ recorder.start();document.querySelector('#record').textContent='■ Stop recording';setStatus('Recording canvas video…');
+ }catch(e){setStatus('Could not start recording: '+e.message)}
+}
+document.querySelector('#record').addEventListener('click',()=>{if(recorder&&recorder.state==='recording')recorder.stop();else recordStart()});
+
+function resize(){const w=canvas.clientWidth,h=canvas.clientHeight;if(!w||!h)return;renderer.setSize(w,h,false);renderer.setPixelRatio(Math.min(devicePixelRatio,2));camera.aspect=w/h;camera.updateProjectionMatrix()}
+window.addEventListener('resize',resize);
+const clock=new THREE.Clock();
+function animate(){
+ requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.035);
+ if(running&&!paused&&objectMesh){
+  const step=dt*speed;simTime+=step;elapsed+=step;
+  velocity.y-=9.8*step;
+  objectMesh.position.y+=velocity.y*step;
+  objectMesh.position.x+=velocity.x*step;
+  objectMesh.position.z+=velocity.z*step;
+  objectMesh.rotation.x+=velocity.z*step*.5;objectMesh.rotation.z-=velocity.x*step*.5;
+  // A gentle funnel-like drift toward the central hole.
+  objectMesh.position.x+=(0-objectMesh.position.x)*.22*step;
+  objectMesh.position.z+=(0-objectMesh.position.z)*.10*step;
+  const radius=.55;
+  // Approximate collisions against the obstacle blocks using their bounding boxes.
+  const objBox=new THREE.Box3().setFromObject(objectMesh);
+  let hit=false;
+  for(const ob of obstacles){const box=new THREE.Box3().setFromObject(ob);if(objBox.intersectsBox(box)&&objectMesh.position.y>.25){velocity.y=Math.abs(velocity.y)*(.28+(100-softness)/500)+1.4;velocity.x+=(objectMesh.position.x-ob.position.x)*.8;velocity.z+=(objectMesh.position.z-ob.position.z)*.35;objectMesh.position.y=box.max.y+radius;hit=true;break}}
+  if(objectMesh.position.y<.55&&Math.abs(objectMesh.position.x)<1.08&&Math.abs(objectMesh.position.z)<1.08){
+   objectMesh.position.y=.55;velocity.y=Math.abs(velocity.y)*(.18+(100-softness)/600);velocity.x+=(Math.random()-.5)*.6;hit=true;
+  }
+  if(hit&&performance.now()-lastImpact>180){lastImpact=performance.now();playImpact(Math.abs(velocity.y));deform(Math.min(1,Math.abs(velocity.y)/8));}
+  if(!hit&&simTime%0.3<step)restoreShape();
+  if(objectMesh.position.y<-.6||elapsed>16){
+   running=false;finished=true;message.style.display='block';
+   const success=objectMesh.position.y<-.1;
+   message.innerHTML=success?'<strong>Round complete! ✨</strong><small>Choose another course or record again.</small>':'<strong>Simulation complete!</strong><small>Try another softness or restart.</small>';
+   setStatus('Round finished. Choose another round, change softness, or record a new run.');
+  }
+ }
+ // subtle motion in the ring and a rotating light for a lively 3D scene
+ ring.rotation.z+=dt*.25;holeGlow.intensity=3.5+Math.sin(performance.now()*.002)*.7;
+ renderer.render(scene,camera);
+}
+buildCourse(0);createObject();resize();animate();
+</script>
+</body>
+</html>
